@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { RunsTable } from "@/components/runs-table"
@@ -11,7 +11,7 @@ import { Activity, CheckCircle2, XCircle, Clock, Menu } from "lucide-react"
 import { useMetrics } from "@/hooks/use-metrics"
 import type { ExtractionRunStatus } from "@/lib/types"
 
-export default function RunsPage() {
+function RunsContent() {
   const searchParams = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<ExtractionRunStatus | "ALL">("ALL")
   const [documentIdFilter, setDocumentIdFilter] = useState<string>("")
@@ -36,6 +36,89 @@ export default function RunsPage() {
     setRefreshKey(prev => prev + 1)
   }
 
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Stats */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
+            <Activity className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.total_extraction_runs || 0}</div>
+            <p className="text-xs text-muted-foreground">All time</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CheckCircle2 className="size-4 text-status-processed" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.completed_runs || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics?.total_extraction_runs 
+                ? Math.round((metrics.completed_runs / metrics.total_extraction_runs) * 100)
+                : 0}% success rate
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <XCircle className="size-4 text-status-failed" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.failed_runs || 0}</div>
+            <p className="text-xs text-muted-foreground">Require attention</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Partial</CardTitle>
+            <Clock className="size-4 text-status-processing" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.partial_runs || 0}</div>
+            <p className="text-xs text-muted-foreground">Partially completed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6">
+        <RunsFilters
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          documentIdFilter={documentIdFilter}
+          onDocumentIdFilterChange={setDocumentIdFilter}
+          onRefresh={handleRefresh}
+        />
+      </div>
+
+      {/* Runs Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Extraction Runs</CardTitle>
+          <CardDescription>View and manage extraction runs with their segments</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <RunsTable 
+            statusFilter={statusFilter}
+            documentIdFilter={documentIdFilter}
+            key={refreshKey}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default function RunsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
@@ -79,84 +162,15 @@ export default function RunsPage() {
           </p>
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-8">
-          {/* Stats */}
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
-                <Activity className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics?.total_extraction_runs || 0}</div>
-                <p className="text-xs text-muted-foreground">All time</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                <CheckCircle2 className="size-4 text-status-processed" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics?.completed_runs || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {metrics?.total_extraction_runs 
-                    ? Math.round((metrics.completed_runs / metrics.total_extraction_runs) * 100)
-                    : 0}% success rate
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Failed</CardTitle>
-                <XCircle className="size-4 text-status-failed" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics?.failed_runs || 0}</div>
-                <p className="text-xs text-muted-foreground">Require attention</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Partial</CardTitle>
-                <Clock className="size-4 text-status-processing" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics?.partial_runs || 0}</div>
-                <p className="text-xs text-muted-foreground">Partially completed</p>
-              </CardContent>
-            </Card>
+        <Suspense fallback={
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
           </div>
-
-          {/* Filters */}
-          <div className="mb-6">
-            <RunsFilters
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              documentIdFilter={documentIdFilter}
-              onDocumentIdFilterChange={setDocumentIdFilter}
-              onRefresh={handleRefresh}
-            />
-          </div>
-
-          {/* Runs Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Extraction Runs</CardTitle>
-              <CardDescription>View and manage extraction runs with their segments</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <RunsTable 
-                statusFilter={statusFilter}
-                documentIdFilter={documentIdFilter}
-                key={refreshKey}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        }>
+          <RunsContent />
+        </Suspense>
       </main>
     </div>
   )
