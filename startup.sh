@@ -9,8 +9,13 @@ cd /home/site/wwwroot
 echo "Starting Next.js app..."
 export NODE_ENV=production
 
-# The GitHub Actions build step already ran `npm ci` and `npm run build`,
-# and the deployed package includes `node_modules` and `.next`.
-# We only need to start the server here.
+# Check if .next directory exists (production build)
+if [ ! -d ".next" ]; then
+  echo "Warning: .next directory not found. Building Next.js app..."
+  # NEXT_PUBLIC_API_BASE_URL should be set in Azure App Settings
+  npm run build
+fi
+
+# Start the production server
 npm start
 

@@ -43,6 +43,8 @@ jobs:
           path: |
             .
             !node_modules/
+            !.git/
+            !.github/
 
   deploy:
     runs-on: ubuntu-latest
