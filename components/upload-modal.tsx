@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useDropzone } from "react-dropzone"
 import { 
   Dialog, 
@@ -18,7 +19,8 @@ import {
   CheckCircle2, 
   AlertCircle, 
   X, 
-  Loader2
+  Loader2,
+  ArrowRight
 } from "lucide-react"
 import { useUploadDocument } from "@/hooks/use-documents"
 
@@ -39,6 +41,7 @@ interface UploadModalProps {
 export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const uploadMutation = useUploadDocument()
+  const router = useRouter()
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     accept: {
@@ -123,6 +126,11 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
   const handleClose = () => {
     setUploadedFiles([])
     onOpenChange(false)
+  }
+
+  const handleGoToRuns = () => {
+    handleClose()
+    router.push("/runs")
   }
 
   const successfulUploads = uploadedFiles.filter(f => f.status === "success")
@@ -280,7 +288,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="size-5 text-green-600" />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-green-800">
                     {successfulUploads.length} file{successfulUploads.length > 1 ? 's' : ''} uploaded successfully
                   </p>
@@ -288,6 +296,14 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
                     Extraction will begin automatically. Monitor progress in the Runs page.
                   </p>
                 </div>
+                <Button
+                  onClick={handleGoToRuns}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  Go to Runs
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
               </div>
             </div>
           )}

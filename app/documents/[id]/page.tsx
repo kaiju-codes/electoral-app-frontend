@@ -547,12 +547,6 @@ export default function DocumentDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Button asChild className="w-full">
-                    <Link href={`/runs?document_id=${document.id}`}>
-                      <Activity className="mr-2 size-4" />
-                      View Runs
-                    </Link>
-                  </Button>
-                  <Button variant="outline" asChild className="w-full">
                     <Link
                       href={`/voters?state=${
                         document.header?.state || ""
@@ -563,6 +557,12 @@ export default function DocumentDetailPage() {
                     >
                       <Users className="mr-2 size-4" />
                       View Voters
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href={`/runs?document_id=${document.id}`}>
+                      <Activity className="mr-2 size-4" />
+                      View Runs
                     </Link>
                   </Button>
                 </CardContent>

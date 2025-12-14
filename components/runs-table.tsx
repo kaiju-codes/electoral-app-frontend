@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronDown, ChevronRight, RefreshCw, Eye, AlertCircle, Loader2, ChevronLeft } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,7 @@ interface RunsTableProps {
 export function RunsTable({ statusFilter = "ALL", documentIdFilter }: RunsTableProps) {
   const [expandedRuns, setExpandedRuns] = useState<Set<number>>(new Set())
   const [currentPage, setCurrentPage] = useState(1)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const pageSize = 20
 
   // Prepare query parameters
@@ -40,6 +41,37 @@ export function RunsTable({ statusFilter = "ALL", documentIdFilter }: RunsTableP
   const { data, isLoading, error, refetch } = useExtractionRuns(queryParams)
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
+
+  const runs = data?.items || []
+
+  // Check if any runs are in non-terminal states (PENDING or RUNNING)
+  const hasNonTerminalRuns = runs.some(
+    (run) => run.status === "PENDING" || run.status === "RUNNING"
+  )
+
+  // Auto-refresh every 10 seconds if there are non-terminal runs
+  useEffect(() => {
+    if (!hasNonTerminalRuns) return
+
+    const interval = setInterval(() => {
+      refetch().then(() => {
+        setLastRefreshed(new Date())
+      })
+    }, 10000) // 10 seconds
+
+    return () => clearInterval(interval)
+  }, [hasNonTerminalRuns, refetch])
+
+  // Format "X seconds ago" from timestamp
+  const formatTimeAgo = (timestamp: Date | null): string => {
+    if (!timestamp) return ""
+    const now = new Date()
+    const diffSeconds = Math.floor((now.getTime() - timestamp.getTime()) / 1000)
+    
+    if (diffSeconds < 1) return "just now"
+    if (diffSeconds === 1) return "1 second ago"
+    return `${diffSeconds} seconds ago`
+  }
 
   const toggleRun = (runId: number) => {
     const newExpanded = new Set(expandedRuns)
@@ -88,6 +120,30 @@ export function RunsTable({ statusFilter = "ALL", documentIdFilter }: RunsTableP
     return <StatusBadge status={statusMap[status as keyof typeof statusMap] as any} />
   }
 
+  // Update lastRefreshed when data changes (initial load or manual refresh)
+  // Only update if there are non-terminal runs
+  useEffect(() => {
+    if (data && !isLoading && hasNonTerminalRuns) {
+      setLastRefreshed(new Date())
+    } else if (data && !isLoading && !hasNonTerminalRuns) {
+      // Clear lastRefreshed when all runs are terminal
+      setLastRefreshed(null)
+    }
+  }, [data, isLoading, hasNonTerminalRuns])
+
+  // Force re-render every second to update "seconds ago" display
+  // Only run when there are non-terminal runs
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!lastRefreshed || !hasNonTerminalRuns) return
+
+    const interval = setInterval(() => {
+      setTick((prev) => prev + 1)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [lastRefreshed, hasNonTerminalRuns])
+
   // Loading state
   if (isLoading) {
     return (
@@ -115,8 +171,6 @@ export function RunsTable({ statusFilter = "ALL", documentIdFilter }: RunsTableP
       </div>
     )
   }
-
-  const runs = data?.items || []
 
   return (
     <div className="space-y-4">
@@ -235,7 +289,14 @@ export function RunsTable({ statusFilter = "ALL", documentIdFilter }: RunsTableP
                     <TableCell colSpan={8} className="bg-muted/30 p-0">
                       <div className="p-4">
                         <div className="space-y-3">
-                          <h4 className="text-sm font-medium">Segments Details</h4>
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium">Segments Details</h4>
+                            {lastRefreshed && hasNonTerminalRuns && (
+                              <span className="text-xs text-muted-foreground">
+                                Last refreshed: {formatTimeAgo(lastRefreshed)}
+                              </span>
+                            )}
+                          </div>
                           <div className="grid gap-3">
                             {run.segments.map((segment) => (
                               <div key={segment.id} className="rounded-lg border bg-background p-3">
